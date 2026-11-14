@@ -1,0 +1,16 @@
+{
+  "name": "Podcast B2 — angielski przy okazji",
+  "short_name": "Podcast B2",
+  "description": "Odcinki do słuchania i powtarzania na głos, z postępem względem listy B2.",
+  "lang": "pl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f4ee",
+  "theme_color": "#34482f",
+  "icons": [
+    {"src": "ikony/ikona-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "ikony/ikona-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "ikony/ikona-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
