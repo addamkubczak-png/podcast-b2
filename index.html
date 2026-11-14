@@ -229,7 +229,7 @@ function ekranPostepu(app){
 
 function ekranOdcinkow(app){
   const e=el('section',{class:'ekran'});app.append(e);
-  e.append(el('div',{class:'naglowek'},el('div',{},el('h1',{},'Odcinki'),el('p',{class:'podpis'},K.odcinki.length+' gotowych · po 6–8 minut'))));
+  e.append(el('div',{class:'naglowek'},el('div',{},el('h1',{},'Odcinki'),el('p',{class:'podpis'},K.odcinki.length+' gotowych · po '+Math.round(Math.min(...K.odcinki.map(o=>o.sekundy))/60)+'–'+Math.round(Math.max(...K.odcinki.map(o=>o.sekundy))/60)+' minut · w zalecanej kolejności'))));
   const lista=el('div',{class:'lista'});
   for(const o of K.odcinki){const zrob=!!S.ukonczone[o.numer],poz=S.pozycje[o.numer]||0;
     lista.append(el('button',{class:'odcinek'+(zrob?' zrobiony':''),onclick:()=>otworz(o.numer)},
