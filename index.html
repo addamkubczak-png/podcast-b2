@@ -160,11 +160,9 @@ function utrwalone(){const c=new Map();for(const o of K.odcinki)if(S.ukonczone[o
 function gotoweHasla(){const set=new Set();K.odcinki.forEach(o=>o.hasla.forEach(h=>set.add(h)));return set;}
 function aktywneDni(){const d=new Set(Object.entries(S.dni).filter(([,s])=>s>=60).map(([k])=>k));Object.values(S.ukonczone).forEach(x=>d.add(x));return d;}
 function seria(){const dni=aktywneDni();let d=dzis(),n=0;if(!dni.has(d))d=przesun(d,-1);while(dni.has(d)){n++;d=przesun(d,-1);}return n;}
-function tempo(){ // nowe hasła dziennie z ostatnich 14 dni
-  const kolejnosc=K.odcinki.filter(o=>S.ukonczone[o.numer]).sort((a,b)=>S.ukonczone[a.numer].localeCompare(S.ukonczone[b.numer]));
-  const znane=new Set(),granica=przesun(dzis(),-13);let nowe=0;const dniAkt=new Set();
-  for(const o of kolejnosc){let ile=0;o.hasla.forEach(h=>{if(!znane.has(h)){znane.add(h);ile++;}});if(S.ukonczone[o.numer]>=granica){nowe+=ile;dniAkt.add(S.ukonczone[o.numer]);}}
-  return dniAkt.size>=2?nowe/14:null;
+function tempo(){ // ukończone odcinki dziennie z ostatnich 14 dni (null, dopóki nie ma danych z dwóch dni)
+  const granica=przesun(dzis(),-13),daty=Object.values(S.ukonczone).filter(d=>d>=granica);
+  return new Set(daty).size>=2?daty.length/14:null;
 }
 function dowtorkiNaDzis(){const d=dzis();return Object.values(S.powtorki).filter(p=>p.termin<=d);}
 
@@ -203,12 +201,14 @@ function ekranPostepu(app){
   e.append(pz);
   // prognoza
   // Kolejne odcinki wprowadzają średnio ok. 30 nowych haseł (pierwsze łapią więcej łatwych słów).
-  const t=tempo(),zostalo=razem-moje.size,srednio=Math.min(30,gotowe.size/Math.max(1,K.odcinki.length))/0.75;
+  const t=tempo(),zostalo=razem-moje.size,reszta=K.odcinki.filter(o=>!S.ukonczone[o.numer]);
+  const godziny=Math.round(reszta.reduce((a,o)=>a+(o.sekundy||0),0)/360)/10;
   const prog=el('div',{class:'karta'},el('h2',{},'Ile zostało'));
   const p=el('p',{class:'prognoza'});
-  p.append('Zostało ',el('strong',{},zostalo+' haseł'),', czyli mniej więcej ',el('strong',{},Math.ceil(zostalo/Math.max(srednio*0.75,1))+' odcinków'),'. ');
-  if(t){const dni=Math.ceil(zostalo/t),data=new Date();data.setDate(data.getDate()+dni);p.append('W obecnym tempie (',Math.round(t*7)+' haseł tygodniowo',') skończysz ok. ',el('strong',{},data.toLocaleDateString('pl-PL',{month:'long',year:'numeric'})),'.');}
-  else p.append('Ukończ odcinki w dwa różne dni, a pokażę przewidywaną datę końca.');
+  const odc=n=>n===1?'odcinek':(n%10>=2&&n%10<=4&&(n%100<12||n%100>14))?'odcinki':'odcinków';
+  p.append('Zostało ',el('strong',{},reszta.length+' '+odc(reszta.length)),' (ok. '+godziny.toLocaleString('pl-PL')+' h słuchania) i ',el('strong',{},zostalo+' haseł'),' do przerobienia. ');
+  if(t&&reszta.length){const dni=Math.ceil(reszta.length/t),data=new Date(),tyg=Math.max(1,Math.round(t*7));data.setDate(data.getDate()+dni);p.append('W obecnym tempie (',tyg+' '+odc(tyg)+' tygodniowo',') skończysz ok. ',el('strong',{},data.toLocaleDateString('pl-PL',{day:'numeric',month:'long',year:'numeric'})),'.');}
+  else if(reszta.length)p.append('Ukończ odcinki w dwa różne dni, a pokażę przewidywaną datę końca.');
   prog.append(p);e.append(prog);
   // seria + kalendarz
   const s=seria(),kal=el('div',{class:'kalendarz','aria-label':'Aktywność z ostatnich 12 tygodni'});
@@ -245,8 +245,16 @@ function ekranOdcinkow(app){
 }
 async function pobierzWszystkie(){
   if(!('caches' in window)){toast('Ta przeglądarka nie obsługuje pobierania.');return;}
-  try{const c=await caches.open('odcinki-v1');let n=0;for(const o of K.odcinki){if(!(await c.match(o.plik))){await c.add(o.plik);}n++;}
-    for(const o of K.odcinki)for(const z of o.zdania)if(z.audio&&!(await c.match(z.audio)))await c.add(z.audio);toast('Pobrano '+n+' odcinków.');}catch{toast('Pobieranie nie powiodło się. Sprawdź internet.');}
+  if(pobierzWszystkie.trwa)return;pobierzWszystkie.trwa=true;
+  const info=el('div',{class:'toast',role:'status'},'Przygotowuję pobieranie…');document.body.append(info);
+  const pliki=[...K.odcinki.map(o=>o.plik),...K.odcinki.flatMap(o=>o.zdania.map(z=>z.audio).filter(Boolean))];
+  let n=0,bledy=0;
+  try{const c=await caches.open('odcinki-v1');
+    for(const p of pliki){n++;if(n%5===1||n===pliki.length)info.textContent='Pobieranie do telefonu: '+Math.round(n/pliki.length*100)+'% ('+Math.min(n,K.odcinki.length)+' z '+K.odcinki.length+' odcinków'+(n>K.odcinki.length?' + nagrania zdań':'')+'). Nie zamykaj aplikacji.';
+      if(await c.match(p))continue;try{await c.add(p);}catch{bledy++;}}
+    info.remove();toast(bledy?'Pobrano z błędami ('+bledy+' plików). Spróbuj ponownie przez Wi-Fi.':'Gotowe! Wszystkie odcinki są w telefonie.');
+  }catch{info.remove();toast('Pobieranie nie powiodło się. Sprawdź internet albo wolne miejsce w telefonie.');}
+  pobierzWszystkie.trwa=false;
 }
 
 function ekranOdtwarzacza(app){
