@@ -338,7 +338,14 @@ document.getElementById('mini-tytul').addEventListener('click',()=>przejdz('sluc
 document.querySelectorAll('.taby button').forEach(b=>b.addEventListener('click',()=>przejdz(b.dataset.tab)));
 
 // ---------- start ----------
-fetch('dane/katalog.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw 0;return r.json();}).then(d=>{K=d;if(S.ostatni&&K.odcinki.some(o=>o.numer===S.ostatni))zaladuj(S.ostatni);rysuj();})
+function migruj(){ // przeniesienie postępu po zmianie numeracji odcinków
+  const cel=K.numeracja||1;if((S.numeracja||1)>=cel||!K.mapa){S.numeracja=cel;return;}
+  const m=k=>K.mapa[String(k)]??Number(k),przenies=o=>Object.fromEntries(Object.entries(o||{}).map(([k,v])=>[m(k),v]));
+  S.ukonczone=przenies(S.ukonczone);S.pozycje=przenies(S.pozycje);if(S.ostatni)S.ostatni=m(S.ostatni);
+  Object.values(S.powtorki||{}).forEach(p=>{if(p.odcinek)p.odcinek=m(p.odcinek);});
+  S.numeracja=cel;zapisz();
+}
+fetch('dane/katalog.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw 0;return r.json();}).then(d=>{K=d;migruj();if(S.ostatni&&K.odcinki.some(o=>o.numer===S.ostatni))zaladuj(S.ostatni);rysuj();})
   .catch(()=>{document.getElementById('app').replaceChildren(el('p',{class:'pusto'},'Nie udało się wczytać katalogu odcinków. Sprawdź internet i odśwież.'));});
 if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost')){navigator.serviceWorker.register('sw.js').catch(()=>{});}
 </script>
