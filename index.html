@@ -71,7 +71,8 @@ h1,h2,h3,p{margin:0}
 .odcinek .stan{font-size:.78rem;color:var(--wyciszony);text-align:right;white-space:nowrap}
 .tag{display:inline-block;font-size:.68rem;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:99px;background:var(--panel2);color:var(--wyciszony);margin-right:4px}
 .tag.gram{background:#f1e6cf;color:#7a5410}
-@media (prefers-color-scheme:dark){.tag.gram{background:#3d331f;color:#e0b25c}}
+.tag.powt{background:#dfe8f3;color:#2d5277}
+@media (prefers-color-scheme:dark){.tag.gram{background:#3d331f;color:#e0b25c}.tag.powt{background:#1f2f40;color:#9cc3ea}}
 .odtwarzacz .okladka{aspect-ratio:1.6;border-radius:18px;background:linear-gradient(140deg,#34482f,#56724a);color:#f6f7ef;padding:20px;display:flex;flex-direction:column;justify-content:space-between;margin-bottom:16px}
 .okladka .fale{display:flex;gap:6px;align-items:center;height:44px}
 .okladka .fale i{width:8px;border-radius:9px;background:#bed6a0;height:30%;transition:height .25s}
@@ -155,6 +156,7 @@ function czas(s){s=Math.max(0,Math.floor(s||0));return Math.floor(s/60)+':'+Stri
 
 // ---------- obliczenia postępu ----------
 function przerobione(){const set=new Set();for(const o of K.odcinki)if(S.ukonczone[o.numer])o.hasla.forEach(h=>set.add(h));return set;}
+function utrwalone(){const c=new Map();for(const o of K.odcinki)if(S.ukonczone[o.numer])o.hasla.forEach(h=>c.set(h,(c.get(h)||0)+1));let n=0;c.forEach(v=>{if(v>=2)n++;});return n;}
 function gotoweHasla(){const set=new Set();K.odcinki.forEach(o=>o.hasla.forEach(h=>set.add(h)));return set;}
 function aktywneDni(){const d=new Set(Object.entries(S.dni).filter(([,s])=>s>=60).map(([k])=>k));Object.values(S.ukonczone).forEach(x=>d.add(x));return d;}
 function seria(){const dni=aktywneDni();let d=dzis(),n=0;if(!dni.has(d))d=przesun(d,-1);while(dni.has(d)){n++;d=przesun(d,-1);}return n;}
@@ -189,6 +191,7 @@ function ekranPostepu(app){
   const minRazem=Object.values(S.dni).reduce((a,b)=>a+b,0);
   e.append(el('div',{class:'karta'},el('div',{class:'glowny'},ring,el('div',{class:'statystyki'},
     el('div',{class:'stat'},el('b',{},moje.size),el('span',{},'z '+razem+' haseł przerobionych')),
+    el('div',{class:'stat'},el('b',{},utrwalone()),el('span',{},'utrwalonych (słyszane 2+ razy)')),
     el('div',{class:'stat'},el('b',{},ukon),el('span',{},'z '+K.odcinki.length+' odcinków ukończonych')),
     el('div',{class:'stat'},el('b',{},minuty(minRazem)),el('span',{},'minut słuchania')))),
     el('div',{class:'legenda'},el('span',{},el('i',{style:'background:var(--akcent)'}),'Ty'),el('span',{},el('i',{style:'background:var(--jasny)'}),'gotowy materiał: '+Math.round(pGotowe*1000)/10+'%'))));
@@ -234,7 +237,7 @@ function ekranOdcinkow(app){
   for(const o of K.odcinki){const zrob=!!S.ukonczone[o.numer],poz=S.pozycje[o.numer]||0;
     lista.append(el('button',{class:'odcinek'+(zrob?' zrobiony':''),onclick:()=>otworz(o.numer)},
       el('span',{class:'nr'},zrob?'✓':o.numer),
-      el('span',{},el('h3',{},o.tytul),el('p',{},el('span',{class:'tag'+(o.typ==='gramatyka'?' gram':'')},o.typ==='gramatyka'?'gramatyka':o.temat),Math.round(o.sekundy/60)+' min · '+o.hasla.length+' haseł')),
+      el('span',{},el('h3',{},o.tytul),el('p',{},el('span',{class:'tag'+(o.typ==='gramatyka'?' gram':o.typ==='powtorka'?' powt':'')},o.typ==='gramatyka'?'gramatyka':o.typ==='powtorka'?'↻ powtórka':o.temat),Math.round(o.sekundy/60)+' min · '+(o.typ==='powtorka'?o.zdania.length+' zdań':o.hasla.length+' haseł'))),
       el('span',{class:'stan'},zrob?'ukończony':poz>10?'wznów':'')));}
   e.append(lista);
   e.append(el('div',{class:'karta',style:'margin-top:16px'},el('h2',{},'Bez internetu'),el('p',{class:'drobny',style:'margin-bottom:10px'},'Pobierz odcinki do pamięci telefonu, żeby słuchać bez zasięgu.'),
