@@ -251,8 +251,15 @@ function daneWidgetu(){
   const d={procent:(moje.size/razem*100).toFixed(1),hasla:moje.size,razem,seria:seria(),dzien:dni[dni.length-1]||'',
     ukonczone:K.odcinki.length-reszta.length,wszystkie:K.odcinki.length,
     godziny:Math.round(reszta.reduce((a,o)=>a+(o.sekundy||0),0)/360)/10,nastepny:nast?nast.numer+'. '+nast.tytul:''};
+  // do dużego widgetu: poziomy, ostatnie 7 dni, utrwalone, terminy powtórek
+  d.poz=POZIOMY.map(lv=>{const k=K.lista.poziomy[lv]||[];return k.filter(x=>moje.has(x)).length+'/'+k.length;}).join(',');
+  d.data=dzis();
+  d.min=[6,5,4,3,2,1,0].map(i=>Math.round((S.dni[przesun(d.data,-i)]||0)/60)).join(',');
+  d.utr=utrwalone();
+  const ter={};Object.values(S.powtorki).forEach(p=>{ter[p.termin]=(ter[p.termin]||0)+1;});
+  d.powt=Object.entries(ter).sort().slice(0,30).map(([k,v])=>k+':'+v).join(',');
   const qs=Object.entries(d).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
-  return {url:'scriptable:///run/PodcastB2?'+qs,podpis:[d.hasla,d.seria,d.dzien,d.ukonczone].join('|')};
+  return {url:'scriptable:///run/PodcastB2?'+qs,podpis:[d.hasla,d.seria,d.dzien,d.ukonczone,d.powt,Math.round(minuty(Object.values(S.dni).reduce((a,b)=>a+b,0))/10)].join('|')};
 }
 async function kopiujSkrypt(){
   const tekst=()=>fetch('widget/PodcastB2.js',{cache:'no-store'}).then(r=>{if(!r.ok)throw 0;return r.text();});
