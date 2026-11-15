@@ -220,6 +220,21 @@ function ekranPostepu(app){
   const nast=K.odcinki.find(o=>!S.ukonczone[o.numer]);
   if(nast)e.append(el('button',{class:'btn pelny',onclick:()=>{otworz(nast.numer,true);}},'▶ Następny odcinek: '+nast.tytul));
   else e.append(el('div',{class:'karta sukces'},el('h2',{},'Wszystkie gotowe odcinki ukończone 🎉'),el('p',{class:'podpis'},'Nowe odcinki pojawią się po kolejnej aktualizacji.')));
+  // widget (Scriptable)
+  const wd=daneWidgetu(),nowe=S.widget&&S.widget!==wd.podpis;
+  const wid=el('details',{class:'karta',style:'margin-top:14px'},el('summary',{},'Widget na ekran główny'+(nowe?' • nowy postęp':'')));
+  const link=el('a',{class:'btn pelny',style:'margin:10px 0 0',href:wd.url,onclick:()=>{S.widget=wd.podpis;zapisz();setTimeout(rysuj,500);}},S.widget?(nowe?'Zaktualizuj widget':'Widget aktualny ✓'):'Zaktualizuj widget');
+  wid.append(el('p',{class:'drobny'},'Pasek postępu, seria 🔥 i ile zostało, na ekranie głównym albo blokady. Działa przez darmową aplikację Scriptable.'),
+    el('ol',{class:'drobny',style:'padding-left:20px;margin:8px 0'},
+      el('li',{},'Zainstaluj Scriptable z App Store.'),
+      el('li',{},'Stuknij „Kopiuj skrypt” poniżej.'),
+      el('li',{},'W Scriptable stuknij +, wklej skrypt, a u góry zmień nazwę na ',el('b',{},'PodcastB2'),'.'),
+      el('li',{},'Wróć tutaj i stuknij „Zaktualizuj widget”.'),
+      el('li',{},'Przytrzymaj palec na ekranie głównym → Edytuj → Dodaj widżet → Scriptable. Potem stuknij widget i jako Script wybierz PodcastB2.')),
+    el('button',{class:'btn maly drugi',onclick:kopiujSkrypt},'Kopiuj skrypt'),link,
+    el('p',{class:'drobny',style:'margin-top:8px'},'Po każdym odcinku stuknij „Zaktualizuj widget”. Telefon odświeża widget sam, zwykle w ciągu kilku minut.'));
+  if(nowe)wid.open=true;
+  e.append(wid);
   // kopia
   const kopia=el('details',{class:'karta',style:'margin-top:14px'},el('summary',{},'Kopia zapasowa postępu'),
     el('p',{class:'drobny'},'Postęp jest zapisany tylko w tym telefonie. Skopiuj kod i zachowaj go, np. w notatkach. Wklej go, żeby odtworzyć postęp.'));
@@ -230,6 +245,23 @@ function ekranPostepu(app){
   e.append(kopia);
 }
 
+function daneWidgetu(){
+  const moje=przerobione(),razem=K.lista.razem,reszta=K.odcinki.filter(o=>!S.ukonczone[o.numer]);
+  const dni=[...aktywneDni()].sort(),nast=reszta[0];
+  const d={procent:(moje.size/razem*100).toFixed(1),hasla:moje.size,razem,seria:seria(),dzien:dni[dni.length-1]||'',
+    ukonczone:K.odcinki.length-reszta.length,wszystkie:K.odcinki.length,
+    godziny:Math.round(reszta.reduce((a,o)=>a+(o.sekundy||0),0)/360)/10,nastepny:nast?nast.numer+'. '+nast.tytul:''};
+  const qs=Object.entries(d).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
+  return {url:'scriptable:///run/PodcastB2?'+qs,podpis:[d.hasla,d.seria,d.dzien,d.ukonczone].join('|')};
+}
+async function kopiujSkrypt(){
+  const tekst=()=>fetch('widget/PodcastB2.js',{cache:'no-store'}).then(r=>{if(!r.ok)throw 0;return r.text();});
+  try{ // iOS wymaga, żeby schowek był użyty od razu w geście, więc przekazujemy obietnicę
+    if(window.ClipboardItem&&navigator.clipboard.write){await navigator.clipboard.write([new ClipboardItem({'text/plain':tekst().then(t=>new Blob([t],{type:'text/plain'}))})]);}
+    else await navigator.clipboard.writeText(await tekst());
+    toast('Skopiowano skrypt. Wklej go w Scriptable.');
+  }catch{toast('Nie udało się skopiować. Sprawdź internet i spróbuj jeszcze raz.');}
+}
 function ekranOdcinkow(app){
   const e=el('section',{class:'ekran'});app.append(e);
   e.append(el('div',{class:'naglowek'},el('div',{},el('h1',{},'Odcinki'),el('p',{class:'podpis'},K.odcinki.length+' gotowych · po '+Math.round(Math.min(...K.odcinki.map(o=>o.sekundy))/60)+'–'+Math.round(Math.max(...K.odcinki.map(o=>o.sekundy))/60)+' minut · w zalecanej kolejności'))));
